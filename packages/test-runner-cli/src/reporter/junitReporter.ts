@@ -17,9 +17,10 @@ type TestSessionMetadata =
 type TestResultWithMetadata =
   TestResult & TestSessionMetadata;
 
-type TestResultsWithMetadataByBrowserName = {
-  [key: string]: TestResultWithMetadata[];
-}
+// Browser name is highly dynamic, hence `string`
+type TestResultsWithMetadataByBrowserName =
+  Record<string, TestResultWithMetadata[]>;
+
 
 // A subset of invalid characters as defined in http://www.w3.org/TR/xml/#charsets that can occur in e.g. stacktraces
 // lifted from https://github.com/michaelleeallen/mocha-junit-reporter/blob/master/index.js (licensed MIT)
