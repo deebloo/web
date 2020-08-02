@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <testsuites>
-  <testsuite name="Chrome" id="0" tests="3" skipped="1" errors="0" failures="1">
+  <testsuite name="Chrome" id="0" tests="3" skipped="1" errors="0" failures="1" time="0">
     <properties>
       <property name="Chrome" value="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/84.0.4147.105 Safari/537.36"/>
     </properties>
@@ -10,7 +10,7 @@
     <testcase name="tbd: confirm true positive" time="0" classname="off-by-one boolean logic errors">
       <skipped/>
     </testcase>
-    <testcase name="off-by-one boolean logic errors &gt; asserts error" classname="undefined">
+    <testcase name="asserts error" classname="undefined" time="0">
       <failure message="expected false to be true" type="AssertionError"><![CDATA[AssertionError: expected false to be true
     at Context.<anonymous> (simple.test.js?wtr-session-id=9819abaf-fae3-4d5b-86d0-a351e07fa814:13:29)
     at callFn (__web-test-runner__/test-framework.js:5856:21)

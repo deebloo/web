@@ -26,6 +26,7 @@ type TestResultsWithMetadataByBrowserName = {
 // other portions of code adapted from same
 // regex lifted from https://github.com/MylesBorins/xml-sanitizer/ (licensed MIT)
 const INVALID_CHARACTERS_REGEX =
+  // eslint-disable-next-line no-control-regex
   /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007f-\u0084\u0086-\u009f\uD800-\uDFFF\uFDD0-\uFDFF\uFFFF\uC008]/g;
 
 const assignSessionPropertiesToTests =
@@ -53,14 +54,16 @@ function getTestRunXML(sessions: TestSession[]): string {
       const [{ testRun, userAgent }] = tests;
 
       const skipped =
-        // @ts-expect-error
         tests.map(x => x.skipped);
 
       const errors =
         tests.map(x => x.error);
 
       const failures =
-        tests.map(x => !x.passed && x.error);
+        tests.filter(x => !x.passed);
+
+      const suiteTime =
+        tests.reduce((time, test) => time + test.duration || 0, 0)
 
       return {
         testsuite: [
@@ -72,19 +75,20 @@ function getTestRunXML(sessions: TestSession[]): string {
               skipped: skipped.length,
               errors: errors.length,
               failures: failures.length,
+              time: suiteTime,
             }
           },
           { properties: [{ property: { _attr: { name, value: userAgent } } }] },
           ...tests.map(test => {
+            console.log(test);
             const attributes = {
               _attr: {
                 name: test.name,
-                // @ts-expect-error
+                time: (typeof test.duration === 'undefined') ? 0 : test.duration / 1000,
                 classname: test.suiteName
               }
             };
 
-            // @ts-expect-error
             if (test.skipped)
               return { testcase: [attributes, { skipped: null }]}
             else if (!test.passed) {
@@ -104,8 +108,6 @@ function getTestRunXML(sessions: TestSession[]): string {
         'system-out': tests.flatMap(escapeLogs(name))
       }
     });
-
-  // console.log(JSON.stringify(testsuites, null, 2))
 
 
   return XML({ testsuites }, { declaration: true, indent: '  ' })

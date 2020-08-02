@@ -1,18 +1,11 @@
-// fixtures/simple/web-test-runner.config.js
 const { junitReporter } = require('../../../../dist/reporter/junitReporter');
 
 module.exports = {
-  reporters: [
-    junitReporter(),
-  ],
+  reporters: [junitReporter()],
   testRunnerHtml: (testRunnerImport, config) => `
-    <html>
-      <body>
-        <script src="chai.js"></script>
-        <script type="module">
-          import '${testRunnerImport}';
-        </script>
-      </body>
-    </html>
+    <script src="chai.min.js"></script>
+    <script type="module">
+      import '${testRunnerImport}';
+    </script>
   `,
 };

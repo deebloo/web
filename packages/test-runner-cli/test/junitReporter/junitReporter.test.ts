@@ -1,9 +1,9 @@
-import { expect } from 'chai'
-import { promisify } from 'util';
-import child_process from 'child_process';
+import { expect } from 'chai';
 import path from 'path'
 import fs from 'fs'
 
+import { promisify } from 'util';
+import child_process from 'child_process';
 const exec = promisify(child_process.exec);
 
 describe('junitReporter', function () {
@@ -22,11 +22,12 @@ describe('junitReporter', function () {
       path.join(cwd, './test-results.xml');
 
     async function runTestFixture() {
-      console.log('runTestFixture')
       try {
-        await exec(`web-test-runner simple.test.js --node-resolve`, { cwd })
+        const { stdout } = await exec(`web-test-runner simple.test.js --node-resolve`, { cwd })
+        console.log('ok')
+        console.log(stdout)
       } catch (e) {
-        console.error(e)
+        console.log(e.stderr, e.stdout)
       }
     }
 
@@ -41,8 +42,10 @@ describe('junitReporter', function () {
     it('produces expected results', function () {
       const actual = fs.readFileSync(outputPath, 'utf-8')
         .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>');
+
       const expected = fs.readFileSync(expectedPath, 'utf-8')
         .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>');
+
       expect(actual).to.equal(expected);
     })
   })
