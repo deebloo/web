@@ -54,10 +54,10 @@ function getTestRunXML(sessions: TestSession[]): string {
       const [{ testRun, userAgent }] = tests;
 
       const skipped =
-        tests.map(x => x.skipped);
+        tests.filter(x => x.skipped);
 
       const errors =
-        tests.map(x => x.error);
+        tests.map(x => x.error).filter(Boolean);
 
       const failures =
         tests.filter(x => !x.passed);
@@ -81,11 +81,13 @@ function getTestRunXML(sessions: TestSession[]): string {
           { properties: [{ property: { _attr: { name, value: userAgent } } }] },
           ...tests.map(test => {
             console.log(test);
+            const testName = test.name.split(' > ').pop();
+            const classname = test.name.split(' > ').slice(0, -1).join(' ')
             const attributes = {
               _attr: {
-                name: test.name,
+                name: testName,
                 time: (typeof test.duration === 'undefined') ? 0 : test.duration / 1000,
-                classname: test.suiteName
+                classname,
               }
             };
 
