@@ -60,10 +60,10 @@ function getTestRunXML(sessions: TestSession[]): string {
         tests.map(x => x.error).filter(Boolean);
 
       const failures =
-        tests.filter(x => !x.passed);
+        tests.filter(x => !x.passed && x.error);
 
       const suiteTime =
-        tests.reduce((time, test) => time + test.duration || 0, 0)
+        tests.reduce((time, test) => time + (test.duration || 0) / 1000 , 0)
 
       return {
         testsuite: [

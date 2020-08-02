@@ -12,6 +12,9 @@ describe('junitReporter', function () {
     const STACK_TRACE_UNIQUE_IDS_REGEX =
       /localhost:\d+|wtr-session-id=[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+/g;
 
+    const NON_ZERO_TIME_VALUE_REGEX =
+      /time="\d\.\d+"/g
+
     const cwd =
       path.join(__dirname, 'fixtures/simple');
 
@@ -41,10 +44,12 @@ describe('junitReporter', function () {
 
     it('produces expected results', function () {
       const actual = fs.readFileSync(outputPath, 'utf-8')
-        .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>');
+        .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
+        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"');
 
       const expected = fs.readFileSync(expectedPath, 'utf-8')
-        .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>');
+        .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
+        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"');
 
       expect(actual).to.equal(expected);
     })
