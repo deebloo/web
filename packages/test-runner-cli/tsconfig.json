@@ -9,10 +9,10 @@
   },
   "references": [
     {
-      "path": "../test-runner-core/tsconfig.json"
+      "path": "../browser-logs/tsconfig.json"
     },
     {
-      "path": "../browser-logs/tsconfig.json"
+      "path": "../test-runner-core/tsconfig.json"
     }
   ],
   "include": [
