@@ -13,7 +13,7 @@ describe('junitReporter', function () {
       /localhost:\d+|wtr-session-id=[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+/g;
 
     const NON_ZERO_TIME_VALUE_REGEX =
-      /time="\d\.\d+"/g
+      /time="((\d\.\d+)|(\d))"/g
 
     const cwd =
       path.join(__dirname, 'fixtures/simple');

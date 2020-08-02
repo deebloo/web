@@ -80,7 +80,6 @@ function getTestRunXML(sessions: TestSession[]): string {
           },
           { properties: [{ property: { _attr: { name, value: userAgent } } }] },
           ...tests.map(test => {
-            console.log(test);
             const testName = test.name.split(' > ').pop();
             const classname = test.name.split(' > ').slice(0, -1).join(' ')
             const attributes = {
@@ -93,7 +92,7 @@ function getTestRunXML(sessions: TestSession[]): string {
 
             if (test.skipped)
               return { testcase: [attributes, { skipped: null }]}
-            else if (!test.passed) {
+            else if (!test.passed && test.error) {
               const { error } = test;
               const message = (error?.message ?? '').replace(INVALID_CHARACTERS_REGEX, '');
               const stack = (error?.stack ?? '').replace(INVALID_CHARACTERS_REGEX, '');
