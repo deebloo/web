@@ -9,18 +9,15 @@ export interface JUnitReporterArgs {
   reportLogs?: boolean;
 }
 
-type TestSessionMetadata =
-  Omit<TestSession, 'tests'>;
+type TestSessionMetadata = Omit<TestSession, 'tests'>;
 
-type TestResultWithMetadata =
-  TestResult & TestSessionMetadata & { suiteName: string };
+type TestResultWithMetadata = TestResult & TestSessionMetadata & { suiteName: string };
 
 // Browser name is highly dynamic, hence `string`
-type TestResultsWithMetadataByBrowserName =
-  Record<string, TestResultWithMetadata[]>;
+type TestResultsWithMetadataByBrowserName = Record<string, TestResultWithMetadata[]>;
 
 interface TestFailureXMLElement {
-  _cdata?: string|string[];
+  _cdata?: string | string[];
   _attr: {
     message: string;
     type: string;
@@ -32,7 +29,7 @@ interface TestCaseXMLAttributes {
     name: string;
     time: number;
     classname: string;
-  }
+  };
 }
 
 type PassedTestCase = TestCaseXMLAttributes;
@@ -48,9 +45,9 @@ type TestSuitePropertiesXMLElement = {
     _attr: {
       name: string;
       value: string;
-    }
-  }
-}
+    };
+  };
+};
 
 interface TestSuiteXMLAttributes {
   _attr: {
@@ -61,49 +58,44 @@ interface TestSuiteXMLAttributes {
     errors: number;
     failures: number;
     time: number;
-  }
+  };
 }
 
-const assignSessionAndSuitePropertiesToTests =
-  ({ testResults, ...rest }: TestSession): TestResultWithMetadata[] =>
-    (testResults?.suites ?? [])
-      .flatMap(suite =>
-        suite
-          .tests
-          .map(test => ({ ...test, ...rest, suiteName: suite.name })));
+const assignSessionAndSuitePropertiesToTests = ({
+  testResults,
+  ...rest
+}: TestSession): TestResultWithMetadata[] =>
+  (testResults?.suites ?? []).flatMap(suite =>
+    suite.tests.map(test => ({ ...test, ...rest, suiteName: suite.name })),
+  );
 
-const toResultsWithMetadataByBrowserName =
-  (acc: TestResultsWithMetadataByBrowserName, test: TestResultWithMetadata): TestResultsWithMetadataByBrowserName =>
-    ({ ...acc, [test.browser.name]: [...acc[test.browser.name] ?? [], test] });
+const toResultsWithMetadataByBrowserName = (
+  acc: TestResultsWithMetadataByBrowserName,
+  test: TestResultWithMetadata,
+): TestResultsWithMetadataByBrowserName => ({
+  ...acc,
+  [test.browser.name]: [...(acc[test.browser.name] ?? []), test],
+});
 
-const escapeLogs =
-  (test: TestResultWithMetadata) =>
-    test.logs.flatMap(x =>
-      x.map(_cdata =>
-        ({ _cdata })));
+const escapeLogs = (test: TestResultWithMetadata) =>
+  test.logs.flatMap(x => x.map(_cdata => ({ _cdata })));
 
-const isFailedTest =
-  (test: TestResult): boolean =>
-    // NB: shouldn't have to check for `error`,
-    // but ATM all tests are coming back `passed: false`
-    !test.passed &&
-    !!test.error
+const isFailedTest = (test: TestResult): boolean =>
+  // NB: shouldn't have to check for `error`,
+  // but ATM all tests are coming back `passed: false`
+  !test.passed && !!test.error;
 
-const addSuiteTime =
-  (time: number, test: TestResultWithMetadata) =>
-    time + (test.duration || 0) / 1000
+const isSkippedTest = (test: TestResult): boolean => !!test.skipped;
 
-const getTestName =
-  (test: TestResultWithMetadata): string =>
-    test.name;
+const addSuiteTime = (time: number, test: TestResultWithMetadata) =>
+  time + (test.duration || 0) / 1000;
 
-const getSuiteName =
-  (test: TestResultWithMetadata): string =>
-    test.suiteName;
+const getTestName = (test: TestResultWithMetadata): string => test.name;
 
-const getTestDurationInSeconds =
-  ({ duration }: TestResult): number =>
-      (typeof duration === 'undefined' ? 0 : duration) / 1000;
+const getSuiteName = (test: TestResultWithMetadata): string => test.suiteName;
+
+const getTestDurationInSeconds = ({ duration }: TestResult): number =>
+  (typeof duration === 'undefined' ? 0 : duration) / 1000;
 
 // A subset of invalid characters as defined in http://www.w3.org/TR/xml/#charsets that can occur in e.g. stacktraces
 // lifted from https://github.com/michaelleeallen/mocha-junit-reporter/blob/master/index.js (licensed MIT)
@@ -113,9 +105,7 @@ const INVALID_CHARACTERS_REGEX =
   // eslint-disable-next-line no-control-regex
   /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007f-\u0084\u0086-\u009f\uD800-\uDFFF\uFDD0-\uFDFF\uFFFF\uC008]/g;
 
-const stripXMLInvalidChars =
-  (x: string): string =>
-    x.replace(INVALID_CHARACTERS_REGEX, '');
+const stripXMLInvalidChars = (x: string): string => x.replace(INVALID_CHARACTERS_REGEX, '');
 
 /**
  * Makes a `<failure>` element
@@ -123,14 +113,11 @@ const stripXMLInvalidChars =
 function testFailureXMLElement(test: TestResultWithMetadata): TestFailureXMLElement {
   const { error } = test;
 
-  const message =
-    stripXMLInvalidChars(error?.message ?? '');
+  const message = stripXMLInvalidChars(error?.message ?? '');
 
-  const stack =
-    stripXMLInvalidChars(error?.stack ?? '');
+  const stack = stripXMLInvalidChars(error?.stack ?? '');
 
-  const type =
-    stack.match(/^\w+Error:/) ? stack.split(':')[0] : '';
+  const type = stack.match(/^\w+Error:/) ? stack.split(':')[0] : '';
 
   return {
     _attr: { message, type },
@@ -143,21 +130,18 @@ function testFailureXMLElement(test: TestResultWithMetadata): TestFailureXMLElem
  * @param test Test Result
  */
 function testCaseXMLAttributes(test: TestResultWithMetadata): TestCaseXMLAttributes {
-  const name =
-    getTestName(test);
+  const name = getTestName(test);
 
-  const time =
-    getTestDurationInSeconds(test);
+  const time = getTestDurationInSeconds(test);
 
-  const classname =
-    getSuiteName(test);
+  const classname = getSuiteName(test);
 
   return {
     _attr: {
       name,
       time,
       classname,
-    }
+    },
   };
 }
 
@@ -165,15 +149,15 @@ function testCaseXMLAttributes(test: TestResultWithMetadata): TestCaseXMLAttribu
  * Makes a `<testcase>` element
  */
 function testCaseXMLElement(test: TestResultWithMetadata): TestCaseXMLElement {
-  const attributes =
-    testCaseXMLAttributes(test);
+  const attributes = testCaseXMLAttributes(test);
 
-  if (test.skipped)
-    return { testcase: [attributes, { skipped: null }]}
+  // prettier-ignore
+  if (isSkippedTest(test))
+    return { testcase: [attributes, { skipped: null }] };
   else if (isFailedTest(test))
-    return { testcase: [attributes, { failure: testFailureXMLElement(test) }] }
-  else
-    return { testcase: attributes }
+    return { testcase: [attributes, { failure: testFailureXMLElement(test) }] };
+  else // prettier-ignore
+    return { testcase: attributes };
 }
 
 /**
@@ -182,30 +166,20 @@ function testCaseXMLElement(test: TestResultWithMetadata): TestCaseXMLElement {
  * @param id Test Run ID
  * @param results Test Results
  */
-function testSuiteXMLAttributes(name: string, id: number, results: TestResultWithMetadata[]): TestSuiteXMLAttributes {
-  const tests =
-    results
-      .length;
+function testSuiteXMLAttributes(
+  name: string,
+  id: number,
+  results: TestResultWithMetadata[],
+): TestSuiteXMLAttributes {
+  const tests = results.length;
 
-  const skipped =
-    results
-      .filter(x => x.skipped)
-      .length;
+  const skipped = results.filter(x => x.skipped).length;
 
-  const errors =
-    results
-      .map(x => x.error)
-      .filter(Boolean)
-      .length;
+  const errors = results.map(x => x.error).filter(Boolean).length;
 
-  const failures =
-    results
-      .filter(isFailedTest)
-      .length;
+  const failures = results.filter(isFailedTest).length;
 
-  const time =
-    results
-      .reduce(addSuiteTime, 0);
+  const time = results.reduce(addSuiteTime, 0);
 
   return {
     _attr: {
@@ -216,8 +190,8 @@ function testSuiteXMLAttributes(name: string, id: number, results: TestResultWit
       errors,
       failures,
       time,
-    }
-  }
+    },
+  };
 }
 
 /**
@@ -228,7 +202,7 @@ function testSuiteXMLAttributes(name: string, id: number, results: TestResultWit
 function testSuitePropertiesXMLElement(
   browserName: string,
   userAgent: string,
-  testFile: string
+  testFile: string,
 ): TestSuitePropertiesXMLElement[] {
   return [
     {
@@ -236,26 +210,26 @@ function testSuitePropertiesXMLElement(
         _attr: {
           name: 'browser.name',
           value: browserName,
-        }
-      }
+        },
+      },
     },
     {
       property: {
         _attr: {
           name: 'browser.userAgent',
           value: userAgent,
-        }
-      }
+        },
+      },
     },
     {
       property: {
         _attr: {
           name: 'test.fileName',
           value: testFile,
-        }
-      }
+        },
+      },
     },
-  ]
+  ];
 }
 
 /**
@@ -264,39 +238,26 @@ function testSuitePropertiesXMLElement(
  * @param sessions Test Sessions
  */
 function getTestRunXML(sessions: TestSession[], reportLogs: boolean): string {
-  const testsuites =
-    Object.entries(sessions
+  const testsuites = Object.entries(
+    sessions
       .flatMap(assignSessionAndSuitePropertiesToTests)
-      .reduce(toResultsWithMetadataByBrowserName, {} as TestResultsWithMetadataByBrowserName))
-    .map(([name, tests]) => {
-      const [{ testRun = 0, userAgent = '', testFile }] = tests;
-      const attributes =
-        testSuiteXMLAttributes(name, testRun, tests);
+      .reduce(toResultsWithMetadataByBrowserName, {} as TestResultsWithMetadataByBrowserName),
+  ).map(([name, tests]) => {
+    const [{ testRun = 0, userAgent = '', testFile }] = tests;
+    const attributes = testSuiteXMLAttributes(name, testRun, tests);
 
-      const properties =
-        testSuitePropertiesXMLElement(name, userAgent, testFile);
+    const properties = testSuitePropertiesXMLElement(name, userAgent, testFile);
 
-      const testcases =
-        tests.map(testCaseXMLElement);
+    const testcases = tests.map(testCaseXMLElement);
 
-      const systemOut =
-        !reportLogs ? [] :
-        tests
-          .flatMap(escapeLogs)
-          .map(x => ({ 'system-out': x }));
+    const systemOut = !reportLogs ? [] : tests.flatMap(escapeLogs).map(x => ({ 'system-out': x }));
 
-      const testsuite =
-        [
-          attributes,
-          { properties },
-          ...testcases,
-          ...systemOut
-        ];
+    const testsuite = [attributes, { properties }, ...testcases, ...systemOut];
 
-      return { testsuite }
-    });
+    return { testsuite };
+  });
 
-  return XML({ testsuites }, { declaration: true, indent: '  ' })
+  return XML({ testsuites }, { declaration: true, indent: '  ' });
 }
 
 /**

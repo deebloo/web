@@ -21,7 +21,9 @@
     "build": "rimraf dist && rollup -c rollup.config.js",
     "build:watch": "rimraf dist && rollup -c rollup.config.js --watch"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "keywords": [
     "web",
     "test",

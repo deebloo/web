@@ -1,39 +1,39 @@
 import { expect } from 'chai';
-import path from 'path'
-import fs from 'fs'
+import path from 'path';
+import fs from 'fs';
 
 import { promisify } from 'util';
 import child_process from 'child_process';
 const exec = promisify(child_process.exec);
 
+const STACK_TRACE_UNIQUE_IDS_REGEX = /localhost:\d+|wtr-session-id=[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+|\.js:\d+:\d+/g;
+
+const NON_ZERO_TIME_VALUE_REGEX = /time="((\d\.\d+)|(\d))"/g;
+
+const USER_AGENT_STRING_REGEX = /"Mozilla\/5\.0 (.*)"/g;
+
+const normalizeOutput = (cwd: string, output: string) =>
+  output
+    .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
+    .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"')
+    .replace(USER_AGENT_STRING_REGEX, '"<<useragent>>"')
+    .replace(cwd, '<<cwd>>');
+
 describe('junitReporter', function () {
   describe('for a simple case', function () {
+    const cwd = path.join(__dirname, 'fixtures/simple');
 
-    const STACK_TRACE_UNIQUE_IDS_REGEX =
-      /localhost:\d+|wtr-session-id=[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+|\.js:\d+:\d+/g;
+    const expectedPath = path.join(cwd, './expected.xml');
 
-    const NON_ZERO_TIME_VALUE_REGEX =
-      /time="((\d\.\d+)|(\d))"/g
-
-    const USER_AGENT_STRING_REGEX =
-      /"Mozilla\/5\.0 (.*)"/g;
-
-    const cwd =
-      path.join(__dirname, 'fixtures/simple');
-
-    const expectedPath =
-      path.join(cwd, './expected.xml');
-
-    const outputPath =
-      path.join(cwd, './test-results.xml');
+    const outputPath = path.join(cwd, './test-results.xml');
 
     async function runTestFixture() {
       try {
-        const { stdout } = await exec(`web-test-runner simple.test.js --node-resolve`, { cwd })
-        console.log('ok')
-        console.log(stdout)
+        const { stdout } = await exec(`web-test-runner simple.test.js --node-resolve`, { cwd });
+        console.log('ok');
+        console.log(stdout);
       } catch (e) {
-        console.log(e.stderr, e.stdout)
+        console.log(e.stderr, e.stdout);
       }
     }
 
@@ -46,19 +46,11 @@ describe('junitReporter', function () {
     afterEach(cleanUpFixture);
 
     it('produces expected results', function () {
-      const actual = fs.readFileSync(outputPath, 'utf-8')
-        .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
-        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"')
-        .replace(USER_AGENT_STRING_REGEX, '"<<useragent>>"')
-        .replace(cwd, '<<cwd>>');
+      const actual = normalizeOutput(cwd, fs.readFileSync(outputPath, 'utf-8'));
 
-      const expected = fs.readFileSync(expectedPath, 'utf-8')
-        .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
-        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"')
-        .replace(USER_AGENT_STRING_REGEX, '"<<useragent>>"')
-        .replace(cwd, '<<cwd>>');
+      const expected = normalizeOutput(cwd, fs.readFileSync(expectedPath, 'utf-8'));
 
       expect(actual).to.equal(expected);
-    })
-  })
-})
+    });
+  });
+});
