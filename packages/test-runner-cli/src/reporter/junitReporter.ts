@@ -6,13 +6,14 @@ import XML from 'xml';
 
 export interface JUnitReporterArgs {
   outputPath?: string;
+  reportLogs?: boolean;
 }
 
 type TestSessionMetadata =
   Omit<TestSession, 'tests'>;
 
 type TestResultWithMetadata =
-  TestResult & TestSessionMetadata;
+  TestResult & TestSessionMetadata & { suiteName: string };
 
 // Browser name is highly dynamic, hence `string`
 type TestResultsWithMetadataByBrowserName =
@@ -42,14 +43,14 @@ interface TestCaseXMLElement {
   testcase: PassedTestCase | SkippedTestCase | FailedTestCase;
 }
 
-type TestSuitePropertiesXMLElement = [{
+type TestSuitePropertiesXMLElement = {
   property: {
     _attr: {
       name: string;
       value: string;
     }
   }
-}]
+}
 
 interface TestSuiteXMLAttributes {
   _attr: {
@@ -63,20 +64,23 @@ interface TestSuiteXMLAttributes {
   }
 }
 
-const assignSessionPropertiesToTests =
-  ({ tests, ...rest }: TestSession): TestResultWithMetadata[] =>
-    tests.map(x => ({ ...x, ...rest }));
+const assignSessionAndSuitePropertiesToTests =
+  ({ testResults, ...rest }: TestSession): TestResultWithMetadata[] =>
+    (testResults?.suites ?? [])
+      .flatMap(suite =>
+        suite
+          .tests
+          .map(test => ({ ...test, ...rest, suiteName: suite.name })));
 
 const toResultsWithMetadataByBrowserName =
   (acc: TestResultsWithMetadataByBrowserName, test: TestResultWithMetadata): TestResultsWithMetadataByBrowserName =>
-    ({ ...acc, [test.browserName]: [...acc[test.browserName] ?? [], test] });
+    ({ ...acc, [test.browser.name]: [...acc[test.browser.name] ?? [], test] });
 
 const escapeLogs =
-  (browserName: string) =>
-    (x: TestResultWithMetadata) =>
-      x.logs.map(x =>
-        x.map(y =>
-          ({ _cdata: `${browserName} ${y}` })));
+  (test: TestResultWithMetadata) =>
+    test.logs.flatMap(x =>
+      x.map(_cdata =>
+        ({ _cdata })));
 
 const isFailedTest =
   (test: TestResult): boolean =>
@@ -90,17 +94,12 @@ const addSuiteTime =
     time + (test.duration || 0) / 1000
 
 const getTestName =
-  (test: TestResult): string =>
-    test.name
-      .split(' > ')
-      .pop() || '';
+  (test: TestResultWithMetadata): string =>
+    test.name;
 
 const getSuiteName =
-  (test: TestResult): string =>
-    test.name
-      .split(' > ')
-      .slice(0, -1)
-      .join(' ');
+  (test: TestResultWithMetadata): string =>
+    test.suiteName;
 
 const getTestDurationInSeconds =
   ({ duration }: TestResult): number =>
@@ -121,7 +120,7 @@ const stripXMLInvalidChars =
 /**
  * Makes a `<failure>` element
  */
-function testFailureXMLElement(test: TestResult): TestFailureXMLElement {
+function testFailureXMLElement(test: TestResultWithMetadata): TestFailureXMLElement {
   const { error } = test;
 
   const message =
@@ -143,7 +142,7 @@ function testFailureXMLElement(test: TestResult): TestFailureXMLElement {
  * Makes attributes for a `<testcase>` element
  * @param test Test Result
  */
-function testCaseXMLAttributes(test: TestResult): TestCaseXMLAttributes {
+function testCaseXMLAttributes(test: TestResultWithMetadata): TestCaseXMLAttributes {
   const name =
     getTestName(test);
 
@@ -165,8 +164,9 @@ function testCaseXMLAttributes(test: TestResult): TestCaseXMLAttributes {
 /**
  * Makes a `<testcase>` element
  */
-function testCaseXMLElement(test: TestResult): TestCaseXMLElement {
-  const attributes = testCaseXMLAttributes(test);
+function testCaseXMLElement(test: TestResultWithMetadata): TestCaseXMLElement {
+  const attributes =
+    testCaseXMLAttributes(test);
 
   if (test.skipped)
     return { testcase: [attributes, { skipped: null }]}
@@ -225,16 +225,37 @@ function testSuiteXMLAttributes(name: string, id: number, results: TestResultWit
  * @param name Suite name
  * @param value User Agent String
  */
-function testSuitePropertiesXMLElement(name: string, value: string): TestSuitePropertiesXMLElement {
+function testSuitePropertiesXMLElement(
+  browserName: string,
+  userAgent: string,
+  testFile: string
+): TestSuitePropertiesXMLElement[] {
   return [
     {
       property: {
         _attr: {
-          name,
-          value
+          name: 'browser.name',
+          value: browserName,
         }
       }
-    }]
+    },
+    {
+      property: {
+        _attr: {
+          name: 'browser.userAgent',
+          value: userAgent,
+        }
+      }
+    },
+    {
+      property: {
+        _attr: {
+          name: 'test.fileName',
+          value: testFile,
+        }
+      }
+    },
+  ]
 }
 
 /**
@@ -242,32 +263,37 @@ function testSuitePropertiesXMLElement(name: string, value: string): TestSuitePr
  * then stringifies the XML.
  * @param sessions Test Sessions
  */
-function getTestRunXML(sessions: TestSession[]): string {
+function getTestRunXML(sessions: TestSession[], reportLogs: boolean): string {
   const testsuites =
     Object.entries(sessions
-      .flatMap(assignSessionPropertiesToTests)
+      .flatMap(assignSessionAndSuitePropertiesToTests)
       .reduce(toResultsWithMetadataByBrowserName, {} as TestResultsWithMetadataByBrowserName))
     .map(([name, tests]) => {
-      const [{ testRun = 0, userAgent = '' }] = tests;
+      const [{ testRun = 0, userAgent = '', testFile }] = tests;
       const attributes =
         testSuiteXMLAttributes(name, testRun, tests);
 
       const properties =
-        testSuitePropertiesXMLElement(name, userAgent);
+        testSuitePropertiesXMLElement(name, userAgent, testFile);
 
       const testcases =
         tests.map(testCaseXMLElement);
 
-      const testsuite =
-        [attributes, { properties }, ...testcases];
-
       const systemOut =
-        tests.flatMap(escapeLogs(name));
+        !reportLogs ? [] :
+        tests
+          .flatMap(escapeLogs)
+          .map(x => ({ 'system-out': x }));
 
-      return {
-        testsuite,
-        'system-out': systemOut
-      }
+      const testsuite =
+        [
+          attributes,
+          { properties },
+          ...testcases,
+          ...systemOut
+        ];
+
+      return { testsuite }
     });
 
   return XML({ testsuites }, { declaration: true, indent: '  ' })
@@ -280,10 +306,11 @@ function getTestRunXML(sessions: TestSession[]): string {
  */
 export function junitReporter({
   outputPath = './test-results.xml',
+  reportLogs = false,
 }: JUnitReporterArgs = {}): Reporter {
   return {
     onTestRunFinished({ sessions }) {
-      const xml = getTestRunXML(sessions);
+      const xml = getTestRunXML(sessions, reportLogs);
       const filepath = path.join(process.cwd(), outputPath);
       fs.writeFileSync(filepath, xml);
     },

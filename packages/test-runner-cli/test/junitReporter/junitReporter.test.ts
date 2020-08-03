@@ -10,10 +10,13 @@ describe('junitReporter', function () {
   describe('for a simple case', function () {
 
     const STACK_TRACE_UNIQUE_IDS_REGEX =
-      /localhost:\d+|wtr-session-id=[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+/g;
+      /localhost:\d+|wtr-session-id=[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+-[\w\d]+|\.js:\d+:\d+/g;
 
     const NON_ZERO_TIME_VALUE_REGEX =
       /time="((\d\.\d+)|(\d))"/g
+
+    const USER_AGENT_STRING_REGEX =
+      /"Mozilla\/5\.0 (.*)"/g;
 
     const cwd =
       path.join(__dirname, 'fixtures/simple');
@@ -45,11 +48,15 @@ describe('junitReporter', function () {
     it('produces expected results', function () {
       const actual = fs.readFileSync(outputPath, 'utf-8')
         .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
-        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"');
+        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"')
+        .replace(USER_AGENT_STRING_REGEX, '"<<useragent>>"')
+        .replace(cwd, '<<cwd>>');
 
       const expected = fs.readFileSync(expectedPath, 'utf-8')
         .replace(STACK_TRACE_UNIQUE_IDS_REGEX, '<<unique>>')
-        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"');
+        .replace(NON_ZERO_TIME_VALUE_REGEX, 'time="<<computed>>"')
+        .replace(USER_AGENT_STRING_REGEX, '"<<useragent>>"')
+        .replace(cwd, '<<cwd>>');
 
       expect(actual).to.equal(expected);
     })
