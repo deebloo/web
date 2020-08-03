@@ -12,8 +12,8 @@
     "lint": "npm run lint:eslint && npm run lint:prettier",
     "lint:eslint": "eslint --ext .ts,.js .",
     "lint:prettier": "prettier \"**/*.{ts,js,md}\" \"**/package.json\" --check --ignore-path .eslintignore",
-    "reinstall-workspace": "rimraf demo/projects/*/node_modules && rimraf packages/*/node_modules && rimraf node_modules && yarn install && yarn build",
     "postinstall": "yarn build && patch-package",
+    "reinstall-workspace": "rimraf demo/projects/*/node_modules && rimraf packages/*/node_modules && rimraf node_modules && yarn install && yarn build",
     "start": "rocket-start",
     "test": "node scripts/workspaces-scripts.mjs test:ci",
     "tsc": "rimraf packages/*/tsconfig.tsbuildinfo && tsc --build packages/tsconfig.project.json",
@@ -22,8 +22,8 @@
     "update:tsconfig": "ts-node scripts/update-package-tsconfig.ts"
   },
   "dependencies": {
-    "@d4kmor/cli": "^0.1.10",
-    "@d4kmor/launch": "^0.1.13",
+    "@d4kmor/cli": "^0.1.11",
+    "@d4kmor/launch": "^0.1.14",
     "patch-package": "^6.2.2"
   },
   "devDependencies": {
